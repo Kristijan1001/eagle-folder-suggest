@@ -47,7 +47,7 @@ suggestions covered 60% of the held-back videos and were right 92.5% of the time
 
 ## Install
 
-1. Download `Folder Suggest 1.0.0 (win-x64).eagleplugin` from the
+1. Download `Folder-Suggest-1.0.0-win-x64.eagleplugin` from the
    [latest release](https://github.com/Kristijan1001/eagle-folder-suggest/releases/latest) and double-click it
    (or drag it onto Eagle). Windows x64, Eagle 4.
 2. Open **Folder Suggest** from Eagle's Plugins panel and press **Download the model** on the Overview page.
