@@ -1,0 +1,8 @@
+# model weights (downloaded, some gated) and data copied from the Eagle library
+/models/
+/data/
+__pycache__/
+test/fixtures/
+node_modules/
+plugin/package-lock.json
+/dist/

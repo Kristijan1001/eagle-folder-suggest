@@ -1,0 +1,41 @@
+{
+ "id": "0ba3fe13-8a46-4534-b6fa-643ebe7c88bb",
+ "version": "1.0.0",
+ "platform": "win",
+ "arch": "x64",
+ "name": "Folder Suggest",
+ "logo": "/logo.png",
+ "keywords": [
+  "folder",
+  "sort",
+  "organize",
+  "suggest",
+  "ai",
+  "video"
+ ],
+ "devTools": false,
+ "main": {
+  "serviceMode": true,
+  "url": "index.html",
+  "width": 1240,
+  "height": 820,
+  "minWidth": 960,
+  "minHeight": 600,
+  "frame": false,
+  "backgroundColor": "#2a2b2f",
+  "multiple": false,
+  "fullscreenable": true,
+  "maximizable": true,
+  "minimizable": true,
+  "resizable": true
+ },
+ "preview": {
+  "mp4,webm,mkv,mov,avi,m4v,wmv,flv,mpg,mpeg,m2ts,mts,3gp,ogv,f4v,rmvb,vob": {
+   "inspector": {
+    "path": "inspector.html",
+    "height": 150,
+    "multiSelect": false
+   }
+  }
+ }
+}

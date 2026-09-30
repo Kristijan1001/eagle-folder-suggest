@@ -1,0 +1,12 @@
+{
+  "name": "eagle-folder-suggest",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Folder Suggest for Eagle",
+  "author": "Kristijan1001",
+  "dependencies": {
+    "node-webpmux": "3.2.1",
+    "onnxruntime-node": "1.30.0",
+    "pngjs": "7.0.0"
+  }
+}

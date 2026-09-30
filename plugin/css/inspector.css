@@ -1,0 +1,40 @@
+/* Folder Suggest: the Inspector panel in Eagle's right sidebar. Eagle sizes the panel to the page's height. */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; overflow: hidden; }
+body {
+	color: var(--text);
+	font: 12px/1.4 "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	user-select: none;
+	padding: 2px 2px 6px;
+}
+.ico { flex: none; display: block; }
+#root { display: flex; flex-direction: column; gap: 5px; }
+
+.row { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-2); background: var(--hover); cursor: pointer; position: relative; overflow: hidden; outline: none; }
+.row:hover, .row:focus-visible { border-color: var(--accent); }
+.row.sure { border-color: var(--good); background: var(--good-soft); }
+.row.current { border-style: dashed; }
+.row .k { font-size: 10.5px; font-weight: 700; color: var(--text-3); text-align: center; }
+.row .n { min-width: 0; }
+.row .fn { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .fp { color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .pc { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-2); font-size: 11.5px; }
+.row.sure .pc, .row.sure .k { color: var(--good); }
+.row .meter { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); opacity: 0.6; }
+.row.sure .meter { background: var(--good); }
+.row.busy { opacity: 0.6; pointer-events: none; }
+
+.note { color: var(--text-2); display: flex; gap: 6px; align-items: flex-start; padding: 2px 2px; }
+.note .ico { margin-top: 1px; color: var(--text-3); }
+.note.good .ico { color: var(--good); }
+.note.warn .ico { color: var(--warn); }
+.note.bad .ico { color: var(--bad); }
+.note b { color: var(--text); font-weight: 600; }
+.foot { display: flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 11px; padding: 2px 2px 0; min-width: 0; }
+.foot .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link { color: var(--accent); cursor: pointer; background: none; border: 0; padding: 0; font: inherit; flex: none; }
+.link:hover { text-decoration: underline; }
+.badge { font-size: 10px; padding: 0 5px; border-radius: 8px; background: var(--panel-2); color: var(--text-2); margin-left: 5px; font-weight: 500; vertical-align: 1px; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

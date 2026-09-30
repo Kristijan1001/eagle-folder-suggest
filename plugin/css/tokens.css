@@ -1,0 +1,56 @@
+/* Folder Suggest for Eagle — follows Eagle's theme (LIGHT, LIGHTGRAY, GRAY, DARK, BLUE, PURPLE). */
+
+:root, body[data-theme="GRAY"] {
+	--bg: #2a2b2f;
+	--bg-2: #303136;
+	--panel: #34363b;
+	--panel-2: #3b3d43;
+	--hover: rgba(255, 255, 255, 0.06);
+	--active: rgba(255, 255, 255, 0.1);
+	--border: rgba(255, 255, 255, 0.08);
+	--border-2: rgba(255, 255, 255, 0.14);
+	--text: #e9eaec;
+	--text-2: #a9adb4;
+	--text-3: #7c8088;
+	--accent: #3d8bfd;
+	--accent-2: #5b9dff;
+	--accent-soft: rgba(61, 139, 253, 0.16);
+	--good: #34c77b;
+	--good-soft: rgba(52, 199, 123, 0.16);
+	--warn: #f0a33a;
+	--warn-soft: rgba(240, 163, 58, 0.16);
+	--bad: #ff5b52;
+	--bad-soft: rgba(255, 91, 82, 0.15);
+	--violet: #a68bff;
+	--violet-soft: rgba(166, 139, 255, 0.16);
+	--shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+	--thumb-bg: #1f2023;
+	--scroll: rgba(255, 255, 255, 0.16);
+}
+body[data-theme="DARK"] {
+	--bg: #18191c; --bg-2: #1e1f23; --panel: #232428; --panel-2: #2a2b30;
+	--thumb-bg: #111214;
+}
+body[data-theme="BLUE"] {
+	--bg: #0d1630; --bg-2: #121c3a; --panel: #172244; --panel-2: #1d2a52;
+	--thumb-bg: #0a1126; --border: rgba(160, 190, 255, 0.1); --border-2: rgba(160, 190, 255, 0.18);
+}
+body[data-theme="PURPLE"] {
+	--bg: #1c1424; --bg-2: #22192c; --panel: #291e35; --panel-2: #31243f;
+	--thumb-bg: #150f1c; --border: rgba(220, 180, 255, 0.1); --border-2: rgba(220, 180, 255, 0.18);
+	--accent: #9c7bff; --accent-2: #b39bff; --accent-soft: rgba(156, 123, 255, 0.18);
+}
+body[data-theme="LIGHT"], body[data-theme="LIGHTGRAY"] {
+	--bg: #f3f4f6; --bg-2: #eceef1; --panel: #ffffff; --panel-2: #f6f7f9;
+	--hover: rgba(0, 0, 0, 0.045); --active: rgba(0, 0, 0, 0.08);
+	--border: rgba(0, 0, 0, 0.09); --border-2: rgba(0, 0, 0, 0.16);
+	--text: #1d1f23; --text-2: #5b6068; --text-3: #8b9097;
+	--accent: #2f7cf6; --accent-2: #1f6ae0; --accent-soft: rgba(47, 124, 246, 0.12);
+	--good: #1f9d5b; --good-soft: rgba(31, 157, 91, 0.12);
+	--warn: #c77a0c; --warn-soft: rgba(199, 122, 12, 0.12);
+	--bad: #e0352c; --bad-soft: rgba(224, 53, 44, 0.1);
+	--violet: #6d4ce0; --violet-soft: rgba(109, 76, 224, 0.1);
+	--shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+	--thumb-bg: #e3e5e9; --scroll: rgba(0, 0, 0, 0.2);
+}
+body[data-theme="LIGHTGRAY"] { --bg: #e3e4e6; --bg-2: #dcdde0; --panel: #f4f5f7; --panel-2: #eceef0; }
