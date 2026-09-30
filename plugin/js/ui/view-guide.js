@@ -50,6 +50,7 @@ function create(app) {
 					h('span', k('Enter'), ' move it to the first suggestion'),
 					h('span', k('S'), ' skip (in "Might be misplaced": keep it where it is)'),
 					h('span', k('←'), ' back'),
+					h('span', k('Scroll wheel'), ' next / previous video'),
 					h('span', k('Z'), ' undo the last move'),
 					h('span', k('Space'), ' play the video'),
 					h('span', k('F'), ' move it to any other folder (type to search)')),

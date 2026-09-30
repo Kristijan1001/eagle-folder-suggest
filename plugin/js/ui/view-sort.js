@@ -1,7 +1,7 @@
 'use strict';
 // Sort: one video at a time with its suggested folders; a key press moves it and shows the next.
 //   1-5 move to that suggestion, Enter the first · S / Right skip (in review: keep it here) · Left back
-//   Z undo · Space play / pause · F search any folder
+//   Z undo · Space play / pause · F search any folder · scroll wheel next / previous
 // Lists: videos waiting to be sorted, sorted videos that might be misplaced (review), a folder, the
 // Eagle selection.
 
@@ -310,6 +310,7 @@ function create(app) {
 			h('span', h('kbd', 'Enter'), 'first'),
 			h('span', h('kbd', 'S'), S.source === 'review' ? 'keep here' : 'skip'),
 			h('span', h('kbd', '←'), 'back'),
+			h('span', h('kbd', 'Wheel'), 'next / previous'),
 			h('span', h('kbd', 'Z'), 'undo'),
 			h('span', h('kbd', 'Space'), 'play'),
 			h('span', h('kbd', 'F'), 'search')));
@@ -382,6 +383,26 @@ function create(app) {
 			default: return false;
 		}
 	}
+
+	// Scroll wheel: down = next video, up = previous. One notch = one video (small touchpad deltas add
+	// up; a short pause stops fast wheels from skipping several). The folder search list and the
+	// folder dropdown keep scrolling normally.
+	let wheelAcc = 0;
+	let wheelLock = 0;
+	el.addEventListener('wheel', (e) => {
+		if (app.current !== 'sort' || document.querySelector('.modal-back') || !S.queue.length) return;
+		if (e.target.closest('.search-box, select, .sort-bar')) return;
+		e.preventDefault();
+		const now = Date.now();
+		if (now < wheelLock) return;
+		wheelAcc += e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
+		if (Math.abs(wheelAcc) < 50) return;
+		const dir = Math.sign(wheelAcc);
+		wheelAcc = 0;
+		wheelLock = now + 140;
+		const p = Math.min(Math.max(S.pos + dir, 0), S.queue.length - 1);
+		if (p !== S.pos) go(p);
+	}, { passive: false });
 
 	app.on('trained', () => { S.preds.clear(); if (app.current === 'sort') fetchPreds(S.pos).then(render); });
 	// undos and moves made elsewhere (Overview, the Inspector panel) keep this list honest

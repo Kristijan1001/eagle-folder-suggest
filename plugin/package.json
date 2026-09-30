@@ -1,7 +1,7 @@
 {
   "name": "eagle-folder-suggest",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Folder Suggest for Eagle",
   "author": "Kristijan1001",
   "dependencies": {
