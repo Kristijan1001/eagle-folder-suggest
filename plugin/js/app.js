@@ -50,6 +50,7 @@
 	const NAV = [
 		{ key: 'overview', label: 'Overview', icon: 'overview' },
 		{ key: 'sort', label: 'Sort', icon: 'sortIn' },
+		{ key: 'guide', label: 'Guide', icon: 'info' },
 		{ key: 'settings', label: 'Settings', icon: 'settings' },
 		{ key: 'log', label: 'Log', icon: 'log' },
 	];
@@ -241,6 +242,7 @@
 		});
 		app.views.overview = req('ui/view-overview.js').create(app);
 		app.views.sort = req('ui/view-sort.js').create(app);
+		app.views.guide = req('ui/view-guide.js').create(app);
 		app.views.settings = req('ui/view-settings.js').create(app);
 		app.views.log = req('ui/view-log.js').create(app);
 		buildShell();

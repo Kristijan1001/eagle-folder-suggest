@@ -108,18 +108,23 @@ function create(app) {
 		return h('div.card',
 			h('div.card-head', icon('sortIn', 17), h('h2', 'Waiting to be sorted')),
 			h('div.card-body',
-				h('div.stat-big', number(st.unsorted), ' ', h('span.stat-sub', 'videos outside your learned folders')),
-				h('div.row', { style: { marginTop: '12px' } },
-					h('button.btn.primary', { disabled: !st.unsorted || !st.learning, onclick: () => app.navigate('sort', { source: 'unsorted' }) }, icon('sortIn', 15), 'Sort them'))));
+				h('div.stat-big', number(st.unsorted), ' ', h('span.stat-sub', 'videos not in any of your sorted folders')),
+				h('div.small.faint', { style: { marginTop: '4px' } }, st.unsorted
+					? 'New videos, or videos in folders you unticked under Settings > Folders to learn.'
+					: 'Nothing new. Videos show up here when they land outside your sorted folders.'),
+				h('div.row.wrap', { style: { marginTop: '12px' } },
+					h('button.btn.primary', { disabled: !st.unsorted || !st.learning, onclick: () => app.navigate('sort', { source: 'unsorted' }) }, icon('sortIn', 15), 'Sort them'),
+					h('button.btn', { disabled: !st.learning, title: 'Sorted videos the plugin would put in a different folder', onclick: () => app.navigate('sort', { source: 'review' }) }, icon('search', 15), 'Check sorted videos'))));
 	}
 
 	function howCard() {
 		return h('div.card',
 			h('div.card-head', icon('info', 17), h('h2', 'How to use it')),
 			h('div.card-body', h('div.how',
-				h('div.n', '1'), h('div', 'Select a video in Eagle. The ', h('b', 'Folder Suggest'), ' panel in the right sidebar shows the folders it belongs in; click one to move it there.'),
-				h('div.n', '2'), h('div', 'Or use the ', h('b', 'Sort'), ' page here: one video at a time, ', h('kbd', '1'), ' ', h('kbd', '2'), ' ', h('kbd', '3'), ' move it, ', h('kbd', 'S'), ' skips, ', h('kbd', 'Z'), ' undoes.'),
-				h('div.n', '3'), h('div', 'Moves swap the folders\' auto-tags and can always be undone. A green suggestion is "sure".'))));
+				h('div.n', '1'), h('div', 'Under ', h('b', 'Settings > Folders to learn'), ', untick the folder new videos arrive in. Videos there then count as waiting to be sorted.'),
+				h('div.n', '2'), h('div', 'Click a video in Eagle: the ', h('b', 'Folder Suggest'), ' box in the right sidebar shows where it belongs. Click a folder to move it there.'),
+				h('div.n', '3'), h('div', 'Or open ', h('b', 'Sort'), ' and go through a list with ', h('kbd', '1'), ' ', h('kbd', '2'), ' ', h('kbd', '3'), '. ', h('b', 'Might be misplaced'), ' finds sorted videos that look like they are in the wrong folder.')),
+				h('div.row', { style: { marginTop: '12px' } }, h('button.btn', { onclick: () => app.navigate('guide') }, icon('info', 14), 'Read the guide'))));
 	}
 
 	async function historyCard() {

@@ -25,10 +25,12 @@ with the folders' auto-tags swapped and Undo always available.
 - **Sidebar panel (Inspector).** Select a video in Eagle: the Folder Suggest panel shows the top
   folders. Click one (or press 1-5 / Enter while the panel has focus) to move the video. The last move
   can be undone from the panel.
-- **Sort page.** One video at a time from "waiting to be sorted" (outside the learned folders), a
-  folder, or the Eagle selection. `1`-`5` move, `Enter` first suggestion, `S`/`→` skip, `←` back,
+- **Sort page.** One video at a time from "waiting to be sorted" (outside the learned folders), "might
+  be misplaced" (sorted videos the plugin would put in another folder; `S` keeps one where it is and it
+  is not listed again), a folder, or the Eagle selection. `1`-`5` move, `Enter` first suggestion, `S`/`→` skip, `←` back,
   `Z` undo, `Space` play, `F` search any folder. **Move all sure** moves every sure suggestion in the
   list at once, undone in one step.
+- **Guide.** A plain-language walkthrough of every part, inside the plugin window.
 - **Settings.** Tick the folders to learn from (untick staging folders), how many videos a folder
   needs, the "sure" target, move behaviour (leave all folders or keep unlearned ones), auto-tag swap,
   GPU and model file.
@@ -47,7 +49,7 @@ suggestions covered 60% of the held-back videos and were right 92.5% of the time
 
 ## Install
 
-1. Download `Folder-Suggest-1.0.0-win-x64.eagleplugin` from the
+1. Download `Folder-Suggest-1.1.0-win-x64.eagleplugin` from the
    [latest release](https://github.com/Kristijan1001/eagle-folder-suggest/releases/latest) and double-click it
    (or drag it onto Eagle). Windows x64, Eagle 4.
 2. Open **Folder Suggest** from Eagle's Plugins panel and press **Download the model** on the Overview page.

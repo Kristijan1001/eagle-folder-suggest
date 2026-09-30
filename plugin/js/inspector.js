@@ -86,6 +86,7 @@
 		else if (r.status === 'ready') {
 			const top = r.suggestions[0];
 			if (top && top.current && r.suggestions.length) html += note('good', 'checkCircle', `Looks right: already in <b>${esc(top.name)}</b>`);
+			else if (top && r.sure && r.current && r.current.length) html += note('warn', 'warning', `Might be in the wrong folder: it looks like <b>${esc(top.name)}</b>`);
 			r.suggestions.forEach((s, i) => {
 				const cls = ['row', i === 0 && r.sure && !s.current ? 'sure' : '', s.current ? 'current' : '', busy ? 'busy' : ''].filter(Boolean).join(' ');
 				html += `<div class="${cls}" tabindex="0" data-i="${i}" title="${s.current ? 'Already in this folder' : `Move to ${esc(s.name)}`}">`

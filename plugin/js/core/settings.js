@@ -17,7 +17,7 @@ const DEFAULTS = {
 	idleUnloadSeconds: 120,
 	modelPath: '',                  // '' = <data folder>\models\pixai-v0.9-fingerprint-fp16.onnx
 	// sort view
-	sortSource: 'unsorted',         // 'unsorted' | 'folder' | 'selection'
+	sortSource: 'unsorted',         // 'unsorted' | 'review' | 'folder' | 'selection'
 	sortFolderId: '',
 	// per library: { [libraryKey]: { learn: { folderId: true|false } } }
 	libraries: {},
@@ -54,7 +54,7 @@ function normalize(s) {
 			}
 		}
 	}
-	if (!['unsorted', 'folder', 'selection'].includes(out.sortSource)) out.sortSource = 'unsorted';
+	if (!['unsorted', 'review', 'folder', 'selection'].includes(out.sortSource)) out.sortSource = 'unsorted';
 	return out;
 }
 

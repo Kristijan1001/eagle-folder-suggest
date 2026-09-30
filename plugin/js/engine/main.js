@@ -35,6 +35,7 @@ const S = {
 	clf: null, clfRowMajor: null,
 	training: null, trainAgain: false, trainTimer: null, newLabeled: 0,
 	moves: [], movesTimer: null,
+	reviewed: new Map(),        // id -> folders when the user chose to keep it there (review list)
 	http: null,
 	statusTimer: null,
 	download: null,             // { got, total, error, ctl } while the model downloads
@@ -267,6 +268,100 @@ async function suggestMany({ ids, k }) {
 	return out;
 }
 
+// ── review: sorted videos that look like they belong in another folder ──
+// Each sorted video is judged the way it would be if it were not in the library (leave-one-out);
+// it is listed when the plugin would put it in a different folder with a "sure" confidence.
+// Videos the user kept where they are ("Keep") are remembered and not listed again unless they move.
+
+function reviewedFile() { return path.join(S.dir, 'reviewed.json'); }
+function loadReviewed() {
+	try { S.reviewed = new Map(Object.entries(JSON.parse(fs.readFileSync(reviewedFile(), 'utf8')))); }
+	catch { S.reviewed = new Map(); }
+}
+function saveReviewed() {
+	fs.mkdirSync(S.dir, { recursive: true });
+	fs.writeFileSync(`${reviewedFile()}.tmp`, JSON.stringify(Object.fromEntries(S.reviewed)));
+	fs.renameSync(`${reviewedFile()}.tmp`, reviewedFile());
+}
+const folderKey = (it) => [...(it.folders || [])].sort().join(',');
+
+/** (G + lam*I)^-1 as Float32 (d x d), from the stored Cholesky factor. */
+function inverse(clf) {
+	if (clf.inv) return clf.inv;
+	const D = ridge.D;
+	const inv = new Float32Array(D * D);
+	const e = new Float64Array(D);
+	for (let j = 0; j < D; j++) {
+		e.fill(0); e[j] = 1;
+		const col = ridge.cholSolve(clf.L, e, D);
+		for (let i = 0; i < D; i++) inv[i * D + j] = col[i];
+	}
+	clf.inv = inv;
+	return inv;
+}
+
+async function review() {
+	if (!S.clf) return { status: S.training ? 'training' : 'learning', ids: [], checked: 0 };
+	const clf = S.clf;
+	if (clf.reviewIds) return { status: 'ready', ids: clf.reviewIds.filter(stillFlaggable), checked: clf.reviewChecked };
+	const t0 = Date.now();
+	const D = ridge.D;
+	const C = clf.C;
+	const cands = [];
+	for (const [id, ex] of clf.exampleOf) {
+		if (ex.cls < 0) continue;                                   // in several learned folders: skip
+		const it = S.items.get(id);
+		if (!it || !it.folders.includes(clf.classes[ex.cls].folderId)) continue;   // moved since learning
+		if (S.reviewed.get(id) === folderKey(it)) continue;         // kept here before
+		if (S.store.has(id)) cands.push({ id, cls: ex.cls, it });
+	}
+	if (!S.clfRowMajor) {
+		const Wr = new Float32Array(D * C);
+		for (let c = 0; c < C; c++) for (let i = 0; i < D; i++) Wr[i * C + c] = clf.W[c * D + i];
+		S.clfRowMajor = Wr;
+	}
+	const inv = inverse(clf);
+	const flagged = [];
+	const x = new Float32Array(1024);
+	for (let s = 0; s < cands.length; s += 2048) {
+		const part = cands.slice(s, s + 2048);
+		const X = new Float32Array(part.length * D);
+		part.forEach((c, r) => { S.store.get(c.id, x); X.set(x, r * D); X[r * D + 1024] = 1; });
+		const sc = await S.ops.matmul(X, part.length, D, S.clfRowMajor, C);
+		const zm = await S.ops.matmul(X, part.length, D, inv, D);
+		part.forEach((c, r) => {
+			let h = 0;
+			for (let i = 0; i < D; i++) h += zm[r * D + i] * X[r * D + i];
+			h *= clf.weights[c.cls];
+			if (!(h < 0.999)) return;
+			const s1 = new Float64Array(C);
+			for (let k = 0; k < C; k++) s1[k] = (sc[r * C + k] - (k === c.cls ? h : 0)) / (1 - h);
+			const { probs } = withTitle(ridge.softmax(s1, trainer.TEMP), titleMatches(c.it.name, clf.bases));
+			const top = topK(probs, 1)[0];
+			if (top !== c.cls && probs[top] >= clf.threshold) flagged.push({ id: c.id, conf: probs[top] });
+		});
+		await pause();
+	}
+	flagged.sort((a, b) => b.conf - a.conf);
+	clf.reviewIds = flagged.map((f) => f.id);
+	clf.reviewChecked = cands.length;
+	log('info', `Review: ${flagged.length.toLocaleString()} of ${cands.length.toLocaleString()} sorted videos look like they belong in another folder (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
+	return { status: 'ready', ids: clf.reviewIds, checked: cands.length };
+}
+function stillFlaggable(id) {
+	const it = S.items.get(id);
+	return !!it && S.reviewed.get(id) !== folderKey(it);
+}
+
+/** "Keep it where it is" in the review list. */
+function keep({ id }) {
+	const it = S.items.get(id);
+	if (!it) return false;
+	S.reviewed.set(id, folderKey(it));
+	saveReviewed();
+	return true;
+}
+
 // ── moves ──
 function plan({ item, target }) {
 	if (!S.folders.has(target)) throw new Error('That folder no longer exists.');
@@ -376,6 +471,7 @@ function openLibrary(libraryPath) {
 	S.learned = new Set();
 	S.clf = null; S.clfRowMajor = null;
 	loadMoves();
+	loadReviewed();
 	if (S.indexer) S.indexer.stop();
 	S.indexer = new Indexer({ store: S.store, model: S.model, log, onBatch: onIndexed });
 	S.indexer.libraryPath = S.libraryPath;
@@ -487,6 +583,8 @@ const commands = {
 		return out;
 	},
 	learned: () => [...S.learned],
+	review: () => review(),
+	keep: (a) => keep(a),
 	reindex({ all }) {
 		if (all) { S.store.clear(); S.clf = null; S.clfRowMajor = null; }
 		S.indexer.failed.clear();

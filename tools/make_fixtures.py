@@ -74,9 +74,10 @@ def thumb(kind, color, rnd):
 
 def main():
     rnd = random.Random(7)
-    if os.path.exists(LIB):
-        shutil.rmtree(LIB)
-    os.makedirs(os.path.join(LIB, 'images'))
+    images = os.path.join(LIB, 'images')
+    os.makedirs(images, exist_ok=True)
+    for name in os.listdir(images):        # empty it in place (the folder itself may be open elsewhere)
+        shutil.rmtree(os.path.join(images, name), ignore_errors=True)
     items = []
     n = 0
 

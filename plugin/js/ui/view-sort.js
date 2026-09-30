@@ -1,7 +1,9 @@
 'use strict';
 // Sort: one video at a time with its suggested folders; a key press moves it and shows the next.
-//   1-5 move to that suggestion, Enter the first · S / Right skip · Left back · Z undo
-//   Space play / pause · F search any folder
+//   1-5 move to that suggestion, Enter the first · S / Right skip (in review: keep it here) · Left back
+//   Z undo · Space play / pause · F search any folder
+// Lists: videos waiting to be sorted, sorted videos that might be misplaced (review), a folder, the
+// Eagle selection.
 
 const path = require('path');
 const { h, icon, clear, number, fileUrl } = require('./dom');
@@ -18,6 +20,9 @@ function create(app) {
 		pos: 0,
 		preds: new Map(),
 		done: new Map(),          // id -> folderId it was moved to
+		kept: new Set(),          // review: kept where they are
+		reviewChecked: 0,
+		note: '',                 // why the list is empty (still learning, ...)
 		loading: false,
 		searchOpen: false,
 		searchSel: 0,
@@ -35,8 +40,15 @@ function create(app) {
 		S.loading = true;
 		render();
 		let ids = [];
+		S.note = '';
 		try {
-			if (S.source === 'selection') {
+			if (S.source === 'review') {
+				const r = await app.engine.call('review');
+				ids = r.ids;
+				S.reviewChecked = r.checked;
+				if (r.status !== 'ready') S.note = 'learning';
+			}
+			else if (S.source === 'selection') {
 				const sel = await eagle.item.get({ isSelected: true, fields: ['id'] });
 				ids = await app.engine.call('queue', { source: 'selection', ids: sel.map((i) => i.id) });
 			}
@@ -47,6 +59,7 @@ function create(app) {
 		S.pos = 0;
 		S.preds.clear();
 		S.done.clear();
+		S.kept.clear();
 		S.loading = false;
 		await fetchPreds(0);
 		render();
@@ -71,11 +84,29 @@ function create(app) {
 
 	function currentId() { return S.queue[S.pos]; }
 
+	const handled = (id) => S.done.has(id) || S.kept.has(id);
+
 	function nextOpen(from, dir = 1) {
 		for (let p = from; p >= 0 && p < S.queue.length; p += dir) {
-			if (!S.done.has(S.queue[p])) return p;
+			if (!handled(S.queue[p])) return p;
 		}
 		return -1;
+	}
+
+	/** Review list: the video is right where it is. Remembered, so it is not listed again. */
+	async function keepCurrent() {
+		const id = currentId();
+		if (!id) return;
+		try { await app.engine.call('keep', { id }); } catch (err) { app.log('warn', `Keep failed: ${err.message}`); }
+		S.kept.add(id);
+		const n = nextOpen(S.pos + 1);
+		if (n >= 0) go(n); else render();
+	}
+
+	/** S / Right: in the review list that means "keep it here"; elsewhere it just moves on. */
+	function skip() {
+		if (S.source === 'review') { keepCurrent(); return; }
+		go(Math.min(S.pos + 1, S.queue.length - 1));
 	}
 
 	async function go(p) {
@@ -113,7 +144,7 @@ function create(app) {
 		await fetchPreds(0, true);
 		const picks = S.queue.filter((id) => {
 			const r = S.preds.get(id);
-			return !S.done.has(id) && r && r.status === 'ready' && r.sure && r.suggestions[0] && !r.suggestions[0].current;
+			return !handled(id) && r && r.status === 'ready' && r.sure && r.suggestions[0] && !r.suggestions[0].current;
 		});
 		if (!picks.length) { kit.toast('No sure suggestions in this list.'); return; }
 		const l = app.status && app.status.learning;
@@ -172,9 +203,16 @@ function create(app) {
 	}
 
 	// ── render ──
+	const SOURCES = [
+		['unsorted', 'Waiting to be sorted', 'Videos that are not in any of your folders yet: new videos, or ones in folders you unticked under Settings > Folders to learn (like the folder new videos arrive in). Press 1, 2 or 3 to move each one.'],
+		['review', 'Might be misplaced', 'Videos you already sorted that the plugin would put in a different folder. Some are real mistakes, some are the plugin being wrong: press 1, 2 or 3 to move one, or S to keep it where it is (it is not listed again).'],
+		['folder', 'A folder', 'Every video in one folder, one at a time.'],
+		['selection', 'Selected in Eagle', 'The videos you have selected in Eagle right now. Select them in Eagle first, then click this again to reload the list.'],
+	];
+
 	function renderBar() {
 		const seg = h('div.seg',
-			...[['unsorted', 'Waiting to be sorted'], ['folder', 'A folder'], ['selection', 'Selected in Eagle']].map(([k, label]) =>
+			...SOURCES.map(([k, label]) =>
 				h(`button${S.source === k ? '.on' : ''}`, { onclick: () => { S.source = k; app.setSettings({ sortSource: k }); loadQueue(); } }, label)));
 		let folderSel = null;
 		if (S.source === 'folder') {
@@ -183,12 +221,17 @@ function create(app) {
 				...[...app.data.folders.values()].sort((a, b) => a.path.localeCompare(b.path)).map((f) => h('option', { value: f.id, selected: f.id === S.folderId }, f.path)));
 			folderSel.style.maxWidth = '340px';
 		}
-		const openCount = S.queue.filter((id) => !S.done.has(id)).length;
-		return h('div.sort-bar', seg, folderSel,
-			h('span.pos', S.queue.length ? `${number(Math.min(S.pos + 1, S.queue.length))} / ${number(S.queue.length)}${S.done.size ? ` · ${number(S.done.size)} moved` : ''}` : ''),
-			h('span.spacer'),
-			h('button.btn', { title: 'Undo the last move (Z)', onclick: undo }, icon('undo', 14), 'Undo'),
-			h('button.btn.primary', { disabled: !openCount, onclick: moveAllSure }, icon('sparkle', 14), 'Move all sure…'));
+		const openCount = S.queue.filter((id) => !handled(id)).length;
+		const counts = [S.done.size ? `${number(S.done.size)} moved` : '', S.kept.size ? `${number(S.kept.size)} kept` : ''].filter(Boolean).join(' · ');
+		const desc = (SOURCES.find((x) => x[0] === S.source) || [])[2] || '';
+		return h('div', { style: { flex: 'none' } },
+			h('div.sort-bar', seg, folderSel,
+				h('span.pos', S.queue.length ? `${number(Math.min(S.pos + 1, S.queue.length))} / ${number(S.queue.length)}${counts ? ` · ${counts}` : ''}` : ''),
+				h('span.spacer'),
+				h('button.btn', { title: 'Undo the last move (Z)', onclick: undo }, icon('undo', 14), 'Undo'),
+				S.source === 'review' ? null
+					: h('button.btn.primary', { disabled: !openCount, title: 'Move every video in this list whose first suggestion is green (sure)', onclick: moveAllSure }, icon('sparkle', 14), 'Move all sure…')),
+			h('div.sort-desc', icon('info', 14), h('span', desc)));
 	}
 
 	function renderStage(it) {
@@ -208,7 +251,7 @@ function create(app) {
 	}
 
 	function sugRow(s, i, sure) {
-		const row = h(`div.sug${i === 0 ? '.first' : ''}${i === 0 && sure ? '.sure' : ''}${s.current ? '.current' : ''}`, { onclick: () => moveCurrent(s.folderId), title: s.current ? 'Already in this folder' : `Move to ${s.name}` },
+		const row = h(`div.sug${i === 0 ? '.first' : ''}${i === 0 && sure && !s.current ? '.sure' : ''}${s.current ? '.current' : ''}`, { onclick: () => (s.current ? skip() : moveCurrent(s.folderId)), title: s.current ? 'It is already in this folder (click to leave it there)' : `Move to ${s.name}` },
 			h('kbd.key', String(i + 1)),
 			h('div', { style: { minWidth: 0 } },
 				h('div.fn', s.name,
@@ -227,6 +270,12 @@ function create(app) {
 		const cur = (it.folders || []).map(folderName);
 		side.append(h('div.title', it.name),
 			h('div.where', icon('folder', 13), cur.length ? cur.join(', ') : 'In no folder'));
+		if (S.source === 'review' && r && r.status === 'ready' && r.suggestions[0] && !S.done.has(it.id)) {
+			const top = r.suggestions[0];
+			side.append(h('div.callout.warn', icon('warning', 16), h('div',
+				'In ', h('b', cur.join(', ') || 'no folder'), ', but it looks like ', h('b', top.name), ` (${pct(top.prob)}). Move it with 1, or press S if it is right where it is.`)));
+		}
+		if (S.kept.has(it.id)) side.append(h('div.callout.info', icon('check', 16), h('div', 'Kept where it is.')));
 		const doneTo = S.done.get(it.id);
 		if (doneTo) side.append(h('div.callout.info', icon('check', 16), h('div', 'Moved to ', h('b', folderName(doneTo)), '. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); undo(); } }, 'Undo'))));
 		const sugs = h('div.sugs');
@@ -259,7 +308,7 @@ function create(app) {
 		side.append(h('div.keys',
 			h('span', h('kbd', '1'), '–', h('kbd', String(Math.max(1, r && r.suggestions ? r.suggestions.length : 3))), 'move'),
 			h('span', h('kbd', 'Enter'), 'first'),
-			h('span', h('kbd', 'S'), 'skip'),
+			h('span', h('kbd', 'S'), S.source === 'review' ? 'keep here' : 'skip'),
 			h('span', h('kbd', '←'), 'back'),
 			h('span', h('kbd', 'Z'), 'undo'),
 			h('span', h('kbd', 'Space'), 'play'),
@@ -275,7 +324,7 @@ function create(app) {
 			const it = itemOf(id);
 			if (!it) continue;
 			const r = S.preds.get(id);
-			strip.append(h(`div.cell${p === S.pos ? '.on' : ''}${S.done.has(id) ? '.done' : ''}`, { title: it.name, onclick: () => go(p) },
+			strip.append(h(`div.cell${p === S.pos ? '.on' : ''}${handled(id) ? '.done' : ''}`, { title: it.name, onclick: () => go(p) },
 				h('img', { src: fileUrl(thumbPath(it)), alt: '', loading: 'lazy', draggable: false }),
 				r && r.status === 'ready' ? h(`span.dot${r.sure ? '.sure' : ''}`) : null));
 		}
@@ -290,13 +339,20 @@ function create(app) {
 		if (S.loading) { el.append(h('div.empty', h('h3', 'Loading…'))); return; }
 		if (S.source === 'folder' && !S.folderId) { el.append(h('div.empty', icon('folder', 34), h('h3', 'Choose a folder to go through'))); return; }
 		if (!S.queue.length) {
-			el.append(h('div.empty', icon('checkCircle', 34), h('h3', S.source === 'unsorted' ? 'Nothing waiting to be sorted' : 'No videos here'),
-				h('div', S.source === 'selection' ? 'Select videos in Eagle, then click "Selected in Eagle" again.' : '')));
+			const EMPTY = {
+				unsorted: ['Nothing waiting to be sorted', 'Every video is in one of your folders. New videos show up here when they land outside your folders, or in a folder you unticked under Settings > Folders to learn.'],
+				review: S.note === 'learning' ? ['Still learning your folders', 'Come back when fingerprinting is further along.']
+					: ['Nothing looks misplaced', `The plugin agrees with where all ${number(S.reviewChecked)} checked videos are.`],
+				folder: ['No videos in this folder', ''],
+				selection: ['Nothing selected', 'Select videos in Eagle, then click "Selected in Eagle" again.'],
+			}[S.source];
+			el.append(h('div.empty', icon('checkCircle', 34), h('h3', EMPTY[0]), h('div', EMPTY[1])));
 			return;
 		}
 		const it = itemOf(currentId());
-		if (S.done.size === S.queue.length) {
-			el.append(h('div.empty', icon('checkCircle', 34), h('h3', 'All done'), h('div', `${number(S.done.size)} videos moved.`)));
+		if (S.queue.every(handled)) {
+			el.append(h('div.empty', icon('checkCircle', 34), h('h3', 'All done'),
+				h('div', [S.done.size ? `${number(S.done.size)} moved` : '', S.kept.size ? `${number(S.kept.size)} kept where they were` : ''].filter(Boolean).join(', ') + '.')));
 			return;
 		}
 		stageEl = renderStage(it);
@@ -317,7 +373,8 @@ function create(app) {
 		}
 		switch (e.key) {
 			case 'Enter': if (r && r.status === 'ready' && r.suggestions[0]) moveCurrent(r.suggestions[0].folderId); return true;
-			case 's': case 'S': case 'ArrowRight': case 'ArrowDown': go(Math.min(S.pos + 1, S.queue.length - 1)); return true;
+			case 's': case 'S': skip(); return true;
+			case 'ArrowRight': case 'ArrowDown': go(Math.min(S.pos + 1, S.queue.length - 1)); return true;
 			case 'ArrowLeft': case 'ArrowUp': go(Math.max(S.pos - 1, 0)); return true;
 			case 'z': case 'Z': undo(); return true;
 			case ' ': S.playing = !S.playing; render(); return true;

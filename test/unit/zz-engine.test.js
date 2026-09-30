@@ -129,6 +129,27 @@ test('engine: fingerprint, learn, suggest, move, undo', { skip: !ready && 'model
 		const s2 = await e.call('suggest', { id: sortedId });
 		assert.ok(s2.loo);
 
+		// review: misfile six sorted videos into another folder, relearn, and they should be listed
+		const byFolder = new Map();
+		for (const it of engItems) if (it.ext === 'mp4' && !truth.has(it.id)) { if (!byFolder.has(it.folders[0])) byFolder.set(it.folders[0], []); byFolder.get(it.folders[0]).push(it); }
+		const [fa, fb] = [...byFolder.keys()];
+		const misfiled = byFolder.get(fa).slice(0, 6).map((it) => ({ ...it, folders: [fb] }));
+		await e.call('itemsChanged', { upsert: misfiled });
+		await e.call('train');
+		const rv = await e.call('review');
+		assert.strictEqual(rv.status, 'ready');
+		const caught = misfiled.filter((it) => rv.ids.includes(it.id)).length;
+		assert.ok(caught >= 4, `review caught ${caught} of 6 misfiled videos`);
+		assert.ok(rv.ids.length < rv.checked * 0.25, `review flagged ${rv.ids.length} of ${rv.checked}`);
+		const flaggedOne = misfiled.find((it) => rv.ids.includes(it.id));
+		const back = await e.call('suggest', { id: flaggedOne.id });
+		assert.strictEqual(back.suggestions[0].folderId, fa, 'a flagged misfiled video is suggested back to its real folder');
+		assert.ok(back.loo);
+		// "keep it where it is" takes it off the list
+		await e.call('keep', { id: rv.ids[0] });
+		const rv2 = await e.call('review');
+		assert.ok(!rv2.ids.includes(rv.ids[0]));
+
 		// the model file going away is reported, not crashed on
 		await e.call('settings', { settings: { ...settings, modelPath: path.join(tmp, 'nope.onnx') } });
 		const st2 = await e.call('status');
